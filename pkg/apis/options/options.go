@@ -120,7 +120,7 @@ func NewFlagSet() *pflag.FlagSet {
 
 	flagSet.Bool("reverse-proxy", false, "are we running behind a reverse proxy, controls whether headers like X-Real-Ip are accepted")
 	flagSet.String("real-client-ip-header", "X-Real-IP", "Header used to determine the real IP of the client when the direct caller is a trusted proxy (one of: X-Forwarded-For, X-Real-IP, X-ProxyUser-IP, X-Envoy-External-Address, or CF-Connecting-IP)")
-	flagSet.StringSlice("trusted-proxy-ip", []string{}, "list of direct proxy IPs or CIDR ranges allowed to set X-Forwarded-* headers when --reverse-proxy is enabled, including every trusted proxy hop in X-Forwarded-For. Defaults to trusting all IPs for backwards compatibility.")
+	flagSet.StringSlice("trusted-proxy-ip", []string{}, "list of direct proxy IPs or CIDR ranges allowed to set X-Forwarded-* headers when --reverse-proxy is enabled, including every trusted proxy hop in X-Forwarded-For. Required when --reverse-proxy is enabled; use 0.0.0.0/0 and ::/0 to deliberately trust every source.")
 	flagSet.StringSlice("trusted-ip", []string{}, "list of IPs or CIDR ranges to allow to bypass authentication. WARNING: trusting by IP has inherent security flaws; with --reverse-proxy, configure --trusted-proxy-ip and read the configuration documentation.")
 	flagSet.Bool("force-https", false, "force HTTPS redirect for HTTP requests")
 	flagSet.String("redirect-url", "", "the OAuth Redirect URL. ie: \"https://internalapp.yourcompany.com/oauth2/callback\"")

@@ -2546,6 +2546,7 @@ func TestTrustedIPs(t *testing.T) {
 		{
 			name:               "IgnoresRemoteAddrInReverseProxyMode",
 			trustedIPs:         []string{"127.0.0.1"},
+			trustedProxyIPs:    []string{"127.0.0.1"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Real-IP", // Default value
 			req: func() *http.Request {
@@ -2761,8 +2762,9 @@ func TestTrustedIPs(t *testing.T) {
 			expectTrusted:      true,
 		},
 		{
-			name:               "TrustAllDefaultRetainsLeftmostCompatibility",
+			name:               "ExplicitTrustAllRetainsLeftmostCompatibility",
 			trustedIPs:         []string{"10.0.0.0/8"},
+			trustedProxyIPs:    []string{"0.0.0.0/0", "::/0"},
 			reverseProxy:       true,
 			realClientIPHeader: "X-Forwarded-For",
 			req:                xffRequest("192.0.2.10:1234", "10.0.0.5, 198.51.100.23"),
@@ -2804,6 +2806,47 @@ func TestTrustedIPs(t *testing.T) {
 				return req
 			}(),
 			expectTrusted: false,
+		},
+		// Direct, untrusted caller cannot gain an exemption by spoofing X-Real-IP.
+		{
+			name:               "DirectSpoofedXRealIPIsRejected",
+			trustedIPs:         []string{"10.0.0.0/8"},
+			trustedProxyIPs:    []string{"192.0.2.10"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Real-IP",
+			req: func() *http.Request {
+				req, _ := http.NewRequest(http.MethodGet, "/", nil)
+				req.Header.Set("X-Real-IP", "10.0.0.5")
+				req.RemoteAddr = "198.51.100.23:1234"
+				return req
+			}(),
+			expectTrusted: false,
+		},
+		// Direct, untrusted caller cannot gain an exemption by spoofing X-Forwarded-For.
+		{
+			name:               "DirectSpoofedXFFIsRejected",
+			trustedIPs:         []string{"10.0.0.0/8"},
+			trustedProxyIPs:    []string{"192.0.2.0/24"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Forwarded-For",
+			req:                xffRequest("198.51.100.23:1234", "10.0.0.5"),
+			expectTrusted:      false,
+		},
+		// Unix socket callers stay trusted: a sanitized X-Real-IP from the
+		// local proxy still resolves the real client for exemptions.
+		{
+			name:               "UnixSocketTrustsXRealIP",
+			trustedIPs:         []string{"10.0.0.0/8"},
+			trustedProxyIPs:    []string{"192.0.2.0/24"},
+			reverseProxy:       true,
+			realClientIPHeader: "X-Real-IP",
+			req: func() *http.Request {
+				req, _ := http.NewRequest(http.MethodGet, "/", nil)
+				req.Header.Set("X-Real-IP", "10.0.0.5")
+				req.RemoteAddr = "@"
+				return req
+			}(),
+			expectTrusted: true,
 		},
 	}
 
@@ -3587,6 +3630,7 @@ func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
 
 	opts := baseTestOptions()
 	opts.ReverseProxy = true
+	opts.TrustedProxyIPs = []string{"127.0.0.1/32"}
 	opts.UpstreamServers = options.UpstreamConfig{
 		Upstreams: []options.Upstream{
 			{

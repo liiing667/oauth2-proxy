@@ -203,6 +203,7 @@ func TestRealClientIPHeader(t *testing.T) {
 	// Ensure simple use case works.
 	o = testOptions()
 	o.ReverseProxy = true
+	o.TrustedProxyIPs = []string{"192.0.2.0/24"}
 	o.RealClientIPHeader = "X-Forwarded-For"
 	assert.Equal(t, nil, Validate(o))
 	assert.NotNil(t, o.GetRealClientIPParser())
@@ -210,6 +211,7 @@ func TestRealClientIPHeader(t *testing.T) {
 	// Ensure unknown header format process an error.
 	o = testOptions()
 	o.ReverseProxy = true
+	o.TrustedProxyIPs = []string{"192.0.2.0/24"}
 	o.RealClientIPHeader = "Forwarded"
 	err := Validate(o)
 	assert.NotEqual(t, nil, err)
@@ -222,6 +224,7 @@ func TestRealClientIPHeader(t *testing.T) {
 	// Ensure invalid header format produces an error.
 	o = testOptions()
 	o.ReverseProxy = true
+	o.TrustedProxyIPs = []string{"192.0.2.0/24"}
 	o.RealClientIPHeader = "!934invalidheader-23:"
 	err = Validate(o)
 	assert.NotEqual(t, nil, err)
@@ -230,6 +233,26 @@ func TestRealClientIPHeader(t *testing.T) {
 	})
 	assert.Equal(t, expected, err.Error())
 	assert.Nil(t, o.GetRealClientIPParser())
+}
+
+func TestReverseProxyRequiresTrustedProxyIPs(t *testing.T) {
+	// Fail closed: --reverse-proxy without --trusted-proxy-ip must not start.
+	o := testOptions()
+	o.ReverseProxy = true
+	err := Validate(o)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "at least one --trusted-proxy-ip IP or CIDR range is required when --reverse-proxy is enabled")
+
+	// An explicit trust-all range remains a valid, deliberate choice.
+	o = testOptions()
+	o.ReverseProxy = true
+	o.TrustedProxyIPs = []string{"0.0.0.0/0", "::/0"}
+	assert.NoError(t, Validate(o))
+
+	// Reverse proxy disabled keeps working without trusted proxy IPs.
+	o = testOptions()
+	o.ReverseProxy = false
+	assert.NoError(t, Validate(o))
 }
 
 func TestRealClientIPLogging(t *testing.T) {

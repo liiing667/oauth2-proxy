@@ -60,8 +60,6 @@ const (
 )
 
 var (
-	defaultTrustedProxyIPs = []string{"0.0.0.0/0", "::/0"}
-
 	// ErrNeedsLogin means the user should be redirected to the login page
 	ErrNeedsLogin = errors.New("redirect to login page")
 
@@ -400,13 +398,11 @@ func buildPreAuthChain(opts *options.Options, sessionStore sessionsapi.SessionSt
 }
 
 func buildTrustedProxyNetSet(opts *options.Options) (*ip.NetSet, error) {
-	trustedProxyIPs := opts.TrustedProxyIPs
-	if opts.ReverseProxy && len(trustedProxyIPs) == 0 {
-		logger.Print("WARNING: --reverse-proxy is enabled but no --trusted-proxy-ip CIDRs were configured. All connecting IPs are trusted to supply X-Forwarded-* headers by default (0.0.0.0/0, ::/0). This preserves backwards compatibility but is a potential security risk; configure --trusted-proxy-ip to match your reverse proxy addresses.")
-		trustedProxyIPs = defaultTrustedProxyIPs
-	}
-
-	return ip.ParseNetSet(trustedProxyIPs)
+	// Fail closed: validation rejects --reverse-proxy without explicit
+	// --trusted-proxy-ip entries, so an empty set here means reverse proxy
+	// mode is disabled and no forwarded headers will be trusted. An explicit
+	// "0.0.0.0/0" / "::/0" still works when the operator opts into it.
+	return ip.ParseNetSet(opts.TrustedProxyIPs)
 }
 
 func buildSessionChain(opts *options.Options, provider providers.Provider, sessionStore sessionsapi.SessionStore, validator basic.Validator) alice.Chain {

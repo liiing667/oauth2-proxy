@@ -24,6 +24,7 @@ var _ = Describe("Allowlist", func() {
 	}
 
 	type validateTrustedProxyIPsTableInput struct {
+		reverseProxy    bool
 		trustedProxyIPs []string
 		errStrings      []string
 	}
@@ -130,10 +131,22 @@ var _ = Describe("Allowlist", func() {
 	DescribeTable("validateTrustedProxyIPs",
 		func(t *validateTrustedProxyIPsTableInput) {
 			opts := &options.Options{
+				ReverseProxy:    t.reverseProxy,
 				TrustedProxyIPs: t.trustedProxyIPs,
 			}
 			Expect(validateTrustedProxyIPs(opts)).To(ConsistOf(t.errStrings))
 		},
+		Entry("Reverse proxy without trusted proxy IPs fails closed", &validateTrustedProxyIPsTableInput{
+			reverseProxy: true,
+			errStrings: []string{
+				"at least one --trusted-proxy-ip IP or CIDR range is required when --reverse-proxy is enabled (set explicit proxy ranges, or use 0.0.0.0/0 and ::/0 to deliberately trust every source)",
+			},
+		}),
+		Entry("Reverse proxy with explicit trust all is accepted", &validateTrustedProxyIPsTableInput{
+			reverseProxy:    true,
+			trustedProxyIPs: []string{"0.0.0.0/0", "::/0"},
+			errStrings:      []string{},
+		}),
 		Entry("Valid trusted proxy IPs", &validateTrustedProxyIPsTableInput{
 			trustedProxyIPs: []string{
 				"127.0.0.1",

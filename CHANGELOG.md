@@ -6,6 +6,8 @@
 
 ## Breaking Changes
 
+- `--reverse-proxy` now requires at least one `--trusted-proxy-ip` entry and fails to start without it. Previously an unset list implicitly trusted all source IPs (`0.0.0.0/0`, `::/0`) with a warning, allowing direct callers to spoof `X-Real-IP` / `X-Forwarded-For` and bypass `--trusted-ip` authentication exemptions. To keep the old behavior, explicitly configure `--trusted-proxy-ip=0.0.0.0/0 --trusted-proxy-ip=::/0`. Unix socket callers remain trusted and real client IP / `X-Forwarded-Uri` / callback behavior is unchanged for trusted peers.
+
 ## Changes since v7.15.6
 
 # V7.15.6

@@ -35,8 +35,9 @@ Most integrations require the following OAuth2 Proxy configuration:
 - `--trusted-proxy-ip=<proxy CIDR>`: Restricts forwarded headers, including
   client identity used by `--trusted-ip`, to the reverse proxies' addresses or
   networks. Include the direct peer and every trusted hop that can appear in
-  XFF. Without this option, all source addresses are trusted for backwards
-  compatibility.
+  XFF. Required whenever `--reverse-proxy` is enabled; without it OAuth2 Proxy
+  fails to start. Set `0.0.0.0/0` and `::/0` explicitly to deliberately trust
+  every source.
 - **Session storage**: For production deployments with large tokens due to a lot of claims like AD groups, use `--session-store-type=redis`
 
 For provider-specific configuration, see the [OAuth Provider Configuration](../providers/index.md) documentation.

@@ -32,6 +32,9 @@ func validateAllowlists(o *options.Options) []string {
 // validateTrustedProxyIPs validates IP/CIDRs for trusted reverse proxies.
 func validateTrustedProxyIPs(o *options.Options) []string {
 	msgs := []string{}
+	if o.ReverseProxy && len(o.TrustedProxyIPs) == 0 {
+		msgs = append(msgs, "at least one --trusted-proxy-ip IP or CIDR range is required when --reverse-proxy is enabled (set explicit proxy ranges, or use 0.0.0.0/0 and ::/0 to deliberately trust every source)")
+	}
 	for i, ipStr := range o.TrustedProxyIPs {
 		if ip.ParseIPNet(ipStr) == nil {
 			msgs = append(msgs, fmt.Sprintf("trusted_proxy_ips[%d] (%s) could not be recognized", i, ipStr))
